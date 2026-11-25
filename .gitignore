@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+/secrets/
+
+# SQLite databases and sidecar files
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+
+# Local data, uploaded documents and logs
+/data/
+/uploads/
+*.log
+
+# Build and test artifacts
+/bin/
+/dist/
+*.test
+coverage.out
+coverage.html
