@@ -7,7 +7,7 @@
 !.env.example
 *.pem
 *.key
-/secrets/
+secrets/
 
 # SQLite databases and sidecar files
 *.db
@@ -18,13 +18,13 @@
 *.sqlite3-*
 
 # Local data, uploaded documents and logs
-/data/
-/uploads/
+data/
+uploads/
 *.log
 
 # Build and test artifacts
-/bin/
-/dist/
+bin/
+dist/
 *.test
 coverage.out
 coverage.html
