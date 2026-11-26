@@ -2,12 +2,25 @@ package web
 
 import (
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"sumsub-demo/internal/auth"
+	"sumsub-demo/internal/store"
 )
 
 func TestRoutes(t *testing.T) {
-	handler, err := NewHandler()
+	db, err := store.Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+	service, err := auth.New(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler, err := NewHandler(service, false)
 	if err != nil {
 		t.Fatal(err)
 	}
