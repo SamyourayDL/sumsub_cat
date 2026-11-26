@@ -42,7 +42,7 @@ Advanced liveness; presets отсутствуют. Учётные данные �
 
 Реализация: app/internal/sumsub, app/internal/web/verification.go,
 app/internal/web/static/verification.js. Автотесты используют имитации, а не
-реальный API. Полный прогон и результат провайдера предстоят; webhook пока отсутствует.
+реальный API. Полный прогон и результат провайдера предстоят; локальный webhook реализован в этапе 6.
 
 ## Тестирование результата и виджета · 26 ноября 2026
 
@@ -72,3 +72,14 @@ sandboxMode и симуляцией решения настоящего Sandbox 
 [согласованного плана этапа 6](stages/06-verification-results.md). Разрешение на использование
 корпоративного Sandbox подтверждено ранее; изменение уровня/liveness и запуск облака
 не выполнялись в рамках подготовки плана.
+
+
+## Реализация webhook · 26 ноября 2026
+
+При реализации повторно сверены [Webhook manager](https://docs.sumsub.com/docs/webhook-manager)
+и [User verification webhooks](https://docs.sumsub.com/docs/user-verification-webhooks).
+createdAtMs — строка UTC `yyyy-MM-dd HH:mm:ss.fff`, не Unix timestamp.
+Подпись проверяется по исходным байтам; поддерживается только HMAC_SHA256_HEX.
+Локальная реализация: app/internal/web/webhook.go и app/internal/store/results.go.
+Тесты используют выдуманный секрет и временные БД. Подключение настоящего webhook,
+testCompleted, документы и liveness по-прежнему не проверены.

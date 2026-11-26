@@ -50,6 +50,10 @@ func (h *handler) verificationToken(w http.ResponseWriter, r *http.Request) {
 	if user == nil {
 		return
 	}
+	if !tokenAllowed(user.Status) {
+		http.Error(w, "Запуск проверки недоступен для текущего статуса.", http.StatusForbidden)
+		return
+	}
 	if h.issuer == nil {
 		http.Error(w, "Проверка пока недоступна.", http.StatusServiceUnavailable)
 		return
@@ -66,7 +70,10 @@ func (h *handler) verificationToken(w http.ResponseWriter, r *http.Request) {
 	}
 	// Recheck after the upstream call: logout during a slow exchange must not
 	// release another SDK token to a session that has already been revoked.
-	if h.verificationUser(w, r) == nil {
+	if current := h.verificationUser(w, r); current == nil {
+		return
+	} else if !tokenAllowed(current.Status) {
+		http.Error(w, "Статус проверки изменился.", http.StatusForbidden)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

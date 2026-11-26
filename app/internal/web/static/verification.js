@@ -6,6 +6,11 @@
   const message = document.getElementById("verification-message");
   const reload = document.getElementById("verification-reload");
   const container = document.getElementById("sumsub-websdk-container");
+  const statusText = document.getElementById("verification-status");
+  const meme = document.getElementById("verification-meme");
+  let polling = root.dataset.poll === "true";
+  let action = root.dataset.action;
+  let savedStatus = root.dataset.status;
   const headers = { "X-Verification-Session": root.dataset.session };
   let instance = null;
   let loadingSDK = null;
@@ -50,7 +55,7 @@
         throw new Error("session");
       }
       if (!response.ok) throw new Error("request");
-      return method === "POST" ? await response.json() : null;
+      return response.status === 204 ? null : await response.json();
     } finally {
       clearTimeout(timeout);
       requests.delete(controller);
@@ -89,7 +94,7 @@
     }
   }
   button.addEventListener("click", async () => {
-    if (active || blocked) return;
+    if (active || blocked || action !== "sdk") return;
     active = true;
     button.disabled = true;
     message.textContent = "Открываем проверку…";
@@ -104,6 +109,8 @@
       instance = window.snsWebSdk.init(initial, () => token(run))
         .withConf({ lang: "ru", theme: "light" })
         .withOptions({ addViewportTag: false, adaptIframeHeight: true })
+        .on("idCheck.onApplicantSubmitted", () => { if (run === generation) { polling = true; message.textContent = "Материалы отправлены, ожидаем результат"; void checkStatus(); } })
+        .on("idCheck.onApplicantStatusChanged", () => { if (run === generation) void checkStatus(); })
         .on("idCheck.onError", () => { if (run === generation) failed(); })
         .build();
       instance.launch("#sumsub-websdk-container");
@@ -112,20 +119,35 @@
       if (run === generation) failed();
     }
   });
-  async function checkSession() {
-    if (blocked || checking) return;
+  async function checkStatus() {
+    if (blocked || checking || document.hidden) return;
     checking = true;
     const run = generation;
-    try { await request("/account/verification/session"); }
-    catch { if (active && run === generation) failed(); }
+    try {
+      const data = await request("/account/verification/status");
+      if (blocked || run !== generation) return;
+      if (!data || typeof data.message !== "string" || !["sdk", "meme", "none"].includes(data.action)) throw new Error("status");
+      const previousStatus = savedStatus;
+      savedStatus = data.status;
+      polling = data.poll;
+      action = data.action;
+      statusText.textContent = data.message;
+      meme.hidden = action !== "meme";
+      button.hidden = action !== "sdk";
+      button.textContent = data.button;
+      if (["approved", "rejected", "conflict"].includes(data.status)) { stop(); message.textContent = ""; }
+      // RETRY can reopen the same applicant once the previous instance is closed.
+      if (data.status === "retry" && previousStatus !== "retry" && active) { stop(); message.textContent = ""; }
+      button.disabled = active || blocked;
+    } catch { /* Keep the saved status and widget on a transient network failure. */ }
     finally { checking = false; }
   }
-  // Detect logout/account changes in another tab without minting more SDK tokens.
-  setInterval(() => { if (active) void checkSession(); }, 15000);
-  window.addEventListener("focus", () => { void checkSession(); });
+  setInterval(() => { if (active || polling) void checkStatus(); }, 5000);
+  window.addEventListener("focus", () => { void checkStatus(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) void checkStatus(); });
   window.addEventListener("pagehide", stop);
   window.addEventListener("pageshow", event => {
-    if (event.persisted) { button.disabled = blocked; void checkSession(); }
+    if (event.persisted) { button.disabled = blocked; void checkStatus(); }
   });
   document.querySelector('form[action="/logout"]')?.addEventListener("submit", () => { blocked = true; stop(); });
 })();
