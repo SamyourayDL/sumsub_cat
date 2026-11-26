@@ -22,6 +22,8 @@ type page struct {
 	Title, Heading, Message, Link, Label string
 	Account                              bool
 	Registration                         bool
+	Verification                         bool
+	VerificationSession                  string
 	Meme                                 bool
 	User                                 *store.User
 	Error, Login                         string
@@ -34,14 +36,19 @@ type handler struct {
 	tmpl     *template.Template
 	limits   *authLimits
 	trustFly bool
+	issuer   TokenIssuer
 }
 
 func NewHandler(service *auth.Service, secure bool, memePath string, trustFly ...bool) (http.Handler, error) {
+	return NewVerificationHandler(service, secure, memePath, nil, trustFly...)
+}
+
+func NewVerificationHandler(service *auth.Service, secure bool, memePath string, issuer TokenIssuer, trustFly ...bool) (http.Handler, error) {
 	tmpl, err := template.ParseFS(templates, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("parse page templates: %w", err)
 	}
-	h := &handler{auth: service, secure: secure, memePath: memePath, tmpl: tmpl, limits: newAuthLimits()}
+	h := &handler{auth: service, secure: secure, memePath: memePath, tmpl: tmpl, limits: newAuthLimits(), issuer: issuer}
 	if len(trustFly) > 0 {
 		h.trustFly = trustFly[0]
 	}
@@ -53,13 +60,16 @@ func NewHandler(service *auth.Service, secure bool, memePath string, trustFly ..
 	mux.HandleFunc("POST /register", h.authenticate)
 	mux.HandleFunc("POST /login", h.authenticate)
 	mux.HandleFunc("POST /logout", h.logout)
+	mux.HandleFunc("POST /account/verification/token", h.verificationToken)
+	mux.HandleFunc("GET /account/verification/session", h.verificationSession)
+	mux.HandleFunc("GET /assets/verification.js", h.verificationScript)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte("ok\n"))
 	})
 	protected := http.NewCrossOriginProtection().Handler(mux)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/account" || r.URL.Path == "/account/register" || r.URL.Path == "/register" || r.URL.Path == "/login" || r.URL.Path == "/logout" {
+		if r.URL.Path == "/account/verification/token" || r.URL.Path == "/account/verification/session" || r.URL.Path == "/account" || r.URL.Path == "/account/register" || r.URL.Path == "/register" || r.URL.Path == "/login" || r.URL.Path == "/logout" {
 			w.Header().Set("Cache-Control", "no-store")
 		}
 		if r.URL.Path == "/" || r.URL.Path == "/meme" {
@@ -111,6 +121,8 @@ func (h *handler) account(w http.ResponseWriter, r *http.Request) {
 	}
 	p := accountPage()
 	p.User = user
+	p.Verification = h.issuer != nil
+	p.VerificationSession = verificationBinding(sessionToken(r))
 	if user == nil {
 		p = guestPage(r.URL.Path == "/account/register")
 	} else if r.URL.Path == "/account/register" {

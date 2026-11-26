@@ -14,6 +14,7 @@ import (
 	"sumsub-demo/internal/auth"
 	"sumsub-demo/internal/config"
 	"sumsub-demo/internal/store"
+	"sumsub-demo/internal/sumsub"
 	"sumsub-demo/internal/web"
 )
 
@@ -36,7 +37,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler, err := web.NewHandler(service, cfg.CookieSecure, cfg.MemePath, cfg.TrustFlyProxy)
+	var issuer web.TokenIssuer
+	if cfg.SumsubAppToken != "" {
+		issuer = sumsub.New(cfg.SumsubAppToken, cfg.SumsubSecretKey, cfg.SumsubLevelName)
+	}
+	handler, err := web.NewVerificationHandler(service, cfg.CookieSecure, cfg.MemePath, issuer, cfg.TrustFlyProxy)
 	if err != nil {
 		return err
 	}
