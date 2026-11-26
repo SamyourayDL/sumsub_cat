@@ -211,7 +211,7 @@ git config --local push.default simple
 ## Подготовка и деплой на Fly.io (этап 4)
 
 Файлы находятся в `app/`: Dockerfile, .dockerignore, docker-entrypoint.sh,
-fly.toml. [Публичное демо](https://sumsub-cat-demo.fly.dev/) работает в Ashburn (iad).
+fly.toml. После проверки в Ashburn (iad) облачное демо полностью удалено 26 ноября 2026.
 Go builder закреплён на 1.27.4-bookworm. Runtime содержит CA-сертификаты,
 бинарник и отдельный мем. При старте root настраивает права только `/data`,
 после чего `gosu` запускает сервер с UID/GID 10001. Локальную БД не переносим.
@@ -259,21 +259,8 @@ docker rm sumsub-stage4-check
 
 [Как опубликовать версию, поставить демо на паузу или удалить его вместе с базой](project/fly-operations.md).
 
-Откройте [регистрацию](https://sumsub-cat-demo.fly.dev/account/register),
-создайте тестовый аккаунт и обновите кабинет. Выход и повторный вход доступны
-через [кабинет](https://sumsub-cat-demo.fly.dev/account). Статус нового аккаунта
-«Проверка не начата». Интеграция WebSDK запланирована на этап 5.
-
-При первом запуске использованы `fly apps create sumsub-cat-demo --org personal`
-и `fly volumes create app_data --size 1 --region iad --app sumsub-cat-demo`.
-Том уже создан. Для обновления из каталога `app/`:
-
-```sh
-fly deploy --remote-only --ha=false
-fly status
-fly checks list
-fly volumes list
-```
+Для проверки сейчас запустите приложение локально и откройте `/account/register`.
+Для следующего облачного теста потребуется заново создать приложение и том по инструкции выше.
 
 Одна shared-cpu-1x с 512 МБ. При непрерывной работе в iad ориентир $3.69
 за 30 дней плюс $0.15 за том 1 ГБ и трафик. При autostop продолжается
