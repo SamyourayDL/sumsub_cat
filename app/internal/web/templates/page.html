@@ -58,6 +58,15 @@
         {{if .User}}
           <p>Вы вошли как <strong>{{.User.Login}}</strong>.</p>
           <p>Статус: <strong>{{if eq .User.Status "not_started"}}Проверка не начата{{else}}{{.User.Status}}{{end}}</strong></p>
+          {{if .Verification}}
+          <div id="verification" data-session="{{.VerificationSession}}">
+            <button class="button" id="verification-start" type="button">Подтвердить личность</button>
+            <p id="verification-message" role="status" aria-live="polite">Проверка в тестовом режиме Sandbox. Используйте тестовые документы.</p>
+            <a id="verification-reload" href="/account" hidden>Открыть кабинет заново</a>
+            <div id="sumsub-websdk-container"></div>
+          </div>
+          <script src="/assets/verification.js" defer></script>
+          {{else}}<p>Проверка личности пока недоступна.</p>{{end}}
           <form method="post" action="/logout"><button class="button" type="submit">Выйти</button></form>
         {{else}}
           {{if .Registration}}
@@ -86,7 +95,7 @@
       <a class="{{if and .Account (not .User)}}back-link{{else}}button{{end}}" href="{{.Link}}">{{.Label}}</a>
     </section>
   </main>
-  <footer>Демонстрационный интерфейс. Проверка личности ещё не подключена.</footer>
+  <footer>Демонстрационный интерфейс · Sumsub Sandbox.</footer>
   {{end}}
 </body>
 </html>

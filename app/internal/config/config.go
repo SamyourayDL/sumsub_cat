@@ -8,10 +8,13 @@ import (
 )
 
 type Config struct {
-	DBPath        string
-	MemePath      string
-	CookieSecure  bool
-	TrustFlyProxy bool
+	DBPath          string
+	MemePath        string
+	CookieSecure    bool
+	TrustFlyProxy   bool
+	SumsubAppToken  string
+	SumsubSecretKey string
+	SumsubLevelName string
 }
 
 func Load() (Config, error) {
@@ -40,6 +43,23 @@ func Load() (Config, error) {
 		c.TrustFlyProxy, err = strconv.ParseBool(value)
 		if err != nil {
 			return c, fmt.Errorf("TRUST_FLY_PROXY must be true or false")
+		}
+	}
+	c.SumsubAppToken = os.Getenv("SUMSUB_APP_TOKEN")
+	c.SumsubSecretKey = os.Getenv("SUMSUB_SECRET_KEY")
+	c.SumsubLevelName = os.Getenv("SUMSUB_LEVEL_NAME")
+	values := []string{c.SumsubAppToken, c.SumsubSecretKey, c.SumsubLevelName}
+	configured := 0
+	for _, v := range values {
+		if v != "" {
+			configured++
+		}
+	}
+	if configured != 0 {
+		for _, v := range values {
+			if strings.TrimSpace(v) == "" || strings.TrimSpace(v) != v || strings.ContainsAny(v, "\r\n\x00") {
+				return c, fmt.Errorf("SUMSUB_APP_TOKEN, SUMSUB_SECRET_KEY and SUMSUB_LEVEL_NAME must all be set without surrounding whitespace or control characters")
+			}
 		}
 	}
 	return c, nil

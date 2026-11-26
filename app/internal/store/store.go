@@ -63,8 +63,8 @@ func (s *Store) initialize() error {
 	if err := tx.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		return err
 	}
-	if version > 1 {
-		return fmt.Errorf("unsupported schema version %d (maximum 1)", version)
+	if version > 2 {
+		return fmt.Errorf("unsupported schema version %d (maximum 2)", version)
 	}
 	if version == 0 {
 		_, err = tx.ExecContext(ctx, `CREATE TABLE users (
@@ -83,6 +83,13 @@ func (s *Store) initialize() error {
   CREATE INDEX sessions_expires_at ON sessions(expires_at);
   PRAGMA user_version = 1;`)
 		if err != nil {
+			return err
+		}
+	}
+	if version < 2 {
+		if _, err := tx.ExecContext(ctx, `ALTER TABLE users ADD COLUMN sumsub_external_id TEXT;
+   CREATE UNIQUE INDEX users_sumsub_external_id ON users(sumsub_external_id);
+   PRAGMA user_version = 2;`); err != nil {
 			return err
 		}
 	}

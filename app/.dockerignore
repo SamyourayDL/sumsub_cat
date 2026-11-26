@@ -9,6 +9,7 @@
 !internal/**/
 !internal/**/*.go
 !internal/web/templates/*.html
+!internal/web/static/*.js
 !resources/
 !resources/meme.jpg
 !docker-entrypoint.sh
