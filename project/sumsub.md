@@ -43,3 +43,32 @@ Advanced liveness; presets отсутствуют. Учётные данные �
 Реализация: app/internal/sumsub, app/internal/web/verification.go,
 app/internal/web/static/verification.js. Автотесты используют имитации, а не
 реальный API. Полный прогон и результат провайдера предстоят; webhook пока отсутствует.
+
+## Тестирование результата и виджета · 26 ноября 2026
+
+Подтверждено по [Simulate review response in Sandbox](https://docs.sumsub.com/reference/simulate-review-response-in-sandbox):
+POST /resources/applicants/{applicantId}/status/testCompleted задаёт GREEN либо RED
+с RETRY/FINAL и запускает настоящий applicantReviewed webhook. Требуются Sandbox
+applicant и ключи; для RED нужны rejectLabels. applicantId можно взять в Dashboard.
+Это официальный способ проверить доставку результата без реального решения о личности.
+Его ещё не вызывали; реальные ключи и доставка не проверены.
+
+Различаем три вида проверки: локальные имитации нашего кода; настоящее уведомление
+Sumsub после testCompleted; прохождение экранов WebSDK с документными шаблонами.
+Первое не доказывает доставку провайдером, второе не доказывает прохождение liveness.
+Официальные [Sandbox presets](https://docs.sumsub.com/docs/test-in-sandbox) и
+[шаблоны документов](https://docs.sumsub.com/docs/verification-document-templates)
+дополняют друг друга. Имена оригинальных файлов сохранять. Реальные паспорта не нужны;
+полностью искусственное прохождение Advanced liveness пока не подтверждено.
+
+[Webhook manager](https://docs.sumsub.com/docs/webhook-manager): HTTPS на порту 443,
+без redirect; соединение в пределах 1 секунды, ответ в пределах 10 секунд. Учитывать
+холодный старт Fly. Подпись проверяется по исходным байтам через X-Payload-Digest и
+X-Payload-Digest-Alg; для нового webhook по умолчанию HMAC_SHA256_HEX. Секрет webhook
+задаётся отдельно. События кнопки тестовой отправки имеют testMode; не путать это с
+sandboxMode и симуляцией решения настоящего Sandbox applicant.
+
+Рекомендованный порядок и матрица прогонов сохранены в блоке Б
+[черновика этапа 6](stages/06-verification-results.md). Разрешение на использование
+корпоративного Sandbox подтверждено ранее; изменение уровня/liveness и запуск облака
+не выполнялись в рамках подготовки плана.
