@@ -99,7 +99,7 @@ func TestAccountLifecycleAndPersistence(t *testing.T) {
 	h, db = newTestHandler(t, path, false)
 	expect(t, request(h, "GET", "/account", "", cookie, nil), 200, "approved")
 	expect(t, request(h, "POST", "/logout", "", cookie, nil), 303, "")
-	expect(t, request(h, "GET", "/account", "", cookie, nil), 200, "Регистрация")
+	expect(t, request(h, "GET", "/account", "", cookie, nil), 200, "Вход в кабинет")
 	for _, login := range []string{"alice", "unknown"} {
 		w = request(h, "POST", "/login", form(login, "wrong-password"), nil, nil)
 		expect(t, w, 401, "Неверный логин или пароль")
@@ -117,8 +117,8 @@ func TestAccountLifecycleAndPersistence(t *testing.T) {
 	if _, err := raw.Exec("UPDATE sessions SET expires_at=?", time.Now().Add(-time.Second).Unix()); err != nil {
 		t.Fatal(err)
 	}
-	expect(t, request(h, "GET", "/account", "", fresh, nil), 200, "Регистрация")
-	expect(t, request(h, "GET", "/account", "", &http.Cookie{Name: "session", Value: strings.Repeat("a", 64)}, nil), 200, "Регистрация")
+	expect(t, request(h, "GET", "/account", "", fresh, nil), 200, "Вход в кабинет")
+	expect(t, request(h, "GET", "/account", "", &http.Cookie{Name: "session", Value: strings.Repeat("a", 64)}, nil), 200, "Вход в кабинет")
 	w = request(h, "POST", "/logout", "", fresh, nil)
 	expect(t, w, 303, "")
 	if w.Result().Cookies()[0].MaxAge != -1 {
@@ -208,5 +208,34 @@ func TestParallelDuplicateAndSeparateClients(t *testing.T) {
 		if !strings.Contains(string(body), "<strong>"+login+"</strong>") || strings.Contains(string(body), "<strong>"+other+"</strong>") {
 			t.Fatal("client isolation failed")
 		}
+	}
+}
+
+func TestGuestFormNavigation(t *testing.T) {
+	h, db := newTestHandler(t, filepath.Join(t.TempDir(), "app.db"), false)
+	defer db.Close()
+	for _, tc := range []struct {
+		method, path, body, action, heading, link string
+		status                                    int
+	}{
+		{"GET", "/account", "", "/login", "Вход в кабинет", "/account/register", 200},
+		{"GET", "/account/register", "", "/register", "Создать аккаунт", "/account", 200},
+		{"POST", "/register", form("ab", "short"), "/register", "Создать аккаунт", "/account", 400},
+		{"POST", "/login", form("unknown", "wrong-password"), "/login", "Вход в кабинет", "/account/register", 401},
+	} {
+		w := request(h, tc.method, tc.path, tc.body, nil, nil)
+		expect(t, w, tc.status, tc.heading)
+		body := w.Body.String()
+		if strings.Count(body, "<form ") != 1 || !strings.Contains(body, `action="`+tc.action+`"`) || !strings.Contains(body, `href="`+tc.link+`"`) {
+			t.Fatalf("wrong form/navigation on %s %s", tc.method, tc.path)
+		}
+	}
+	w := request(h, "POST", "/register", form("alice", testPassword), nil, nil)
+	expect(t, w, 303, "")
+	cookie := w.Result().Cookies()[0]
+	w = request(h, "GET", "/account/register", "", cookie, nil)
+	expect(t, w, 303, "")
+	if w.Header().Get("Location") != "/account" {
+		t.Fatal("authenticated user must return to account")
 	}
 }

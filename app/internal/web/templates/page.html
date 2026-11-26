@@ -22,7 +22,12 @@
     input { display: block; width: 100%; max-width: 26rem; padding: .7rem; margin-top: .4rem; font: inherit; border: 1px solid #85968c; border-radius: .4rem; }
     button { font: inherit; cursor: pointer; border: 0; }
     .error { color: #9c271a; }
-    .forms { display: grid; gap: 2rem; }
+    .auth-card { max-width: 32rem; margin-inline: auto; }
+    .auth-card h1 { font-size: clamp(1.8rem, 5vw, 2.35rem); }
+    .auth-card input, .auth-card button { width: 100%; max-width: none; }
+    .auth-switch { margin-top: 1.5rem; text-align: center; }
+    .back-link { display: block; margin-top: 1.5rem; text-align: center; font-size: .9rem; }
+    input:focus-visible, button:focus-visible { outline: 3px solid #a44b12; outline-offset: 3px; }
     small { display: block; margin-top: .4rem; line-height: 1.5; color: #52615a; }
     .button { display: inline-block; margin-top: 1rem; padding: .85rem 1.2rem; border-radius: .65rem; background: #215b49; color: white; text-decoration: none; }
   </style>
@@ -36,7 +41,7 @@
     </nav>
   </header>
   <main>
-    <section class="card" aria-labelledby="page-heading">
+    <section class="card{{if and .Account (not .User)}} auth-card{{end}}" aria-labelledby="page-heading">
       <p class="eyebrow">Учебный проект</p>
       <h1 id="page-heading">{{.Heading}}</h1>
       {{if .Message}}<p>{{.Message}}</p>{{end}}
@@ -47,10 +52,8 @@
           <p>Статус: <strong>{{if eq .User.Status "not_started"}}Проверка не начата{{else}}{{.User.Status}}{{end}}</strong></p>
           <form method="post" action="/logout"><button class="button" type="submit">Выйти</button></form>
         {{else}}
-          <p>Создайте тестовый аккаунт или войдите в существующий.</p>
-          <div class="forms">
+          {{if .Registration}}
             <form method="post" action="/register">
-              <h2>Регистрация</h2>
               <label for="register-login">Логин</label>
               <input id="register-login" name="login" value="{{.Login}}" autocomplete="username" required aria-describedby="login-help">
               <small id="login-help">3–32 латинские буквы, цифры, дефис или подчёркивание. Регистр не учитывается, пробелы по краям удаляются.</small>
@@ -59,18 +62,20 @@
               <small id="password-help">Минимум 12 символов, максимум 72 байта UTF-8. Пробелы в пароле сохраняются; нелатинский символ может занимать несколько байтов.</small>
               <button class="button" type="submit">Зарегистрироваться</button>
             </form>
+            <p class="auth-switch">Уже есть аккаунт? <a href="/account">Войти</a></p>
+          {{else}}
             <form method="post" action="/login">
-              <h2>Вход</h2>
               <label for="login-login">Логин</label>
               <input id="login-login" name="login" value="{{.Login}}" autocomplete="username" required>
               <label for="login-password">Пароль</label>
               <input id="login-password" type="password" name="password" autocomplete="current-password" required>
               <button class="button" type="submit">Войти</button>
             </form>
-          </div>
+            <p class="auth-switch">Ещё нет аккаунта? <a href="/account/register">Зарегистрироваться</a></p>
+          {{end}}
         {{end}}
       {{end}}
-      <a class="button" href="{{.Link}}">{{.Label}}</a>
+      <a class="{{if and .Account (not .User)}}back-link{{else}}button{{end}}" href="{{.Link}}">{{.Label}}</a>
     </section>
   </main>
   <footer>Демонстрационный интерфейс. Проверка личности ещё не подключена.</footer>
