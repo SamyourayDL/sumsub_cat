@@ -257,6 +257,8 @@ docker rm sumsub-stage4-check
 
 ### Публичное демо
 
+[Как опубликовать версию, поставить демо на паузу или удалить его вместе с базой](project/fly-operations.md).
+
 Откройте [регистрацию](https://sumsub-cat-demo.fly.dev/account/register),
 создайте тестовый аккаунт и обновите кабинет. Выход и повторный вход доступны
 через [кабинет](https://sumsub-cat-demo.fly.dev/account). Статус нового аккаунта
