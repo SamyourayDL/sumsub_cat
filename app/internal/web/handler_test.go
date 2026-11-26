@@ -20,7 +20,7 @@ func TestRoutes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler, err := NewHandler(service, false)
+	handler, err := NewHandler(service, false, "resources/meme.jpg")
 	if err != nil {
 		t.Fatal(err)
 	}

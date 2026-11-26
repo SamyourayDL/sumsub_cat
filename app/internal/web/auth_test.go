@@ -29,7 +29,7 @@ func newTestHandler(t *testing.T, path string, secure bool) (http.Handler, *stor
 	if err != nil {
 		t.Fatal(err)
 	}
-	h, err := NewHandler(service, secure)
+	h, err := NewHandler(service, secure, "resources/meme.jpg")
 	if err != nil {
 		t.Fatal(err)
 	}

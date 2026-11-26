@@ -35,7 +35,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler, err := web.NewHandler(service, cfg.CookieSecure)
+	handler, err := web.NewHandler(service, cfg.CookieSecure, cfg.MemePath)
 	if err != nil {
 		return err
 	}
