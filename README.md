@@ -211,7 +211,7 @@ git config --local push.default simple
 ## Подготовка и деплой на Fly.io (этап 4)
 
 Файлы находятся в `app/`: Dockerfile, .dockerignore, docker-entrypoint.sh,
-fly.toml. Облачные ресурсы пока не созданы; публичного URL ещё нет.
+fly.toml. [Публичное демо](https://sumsub-cat-demo.fly.dev/) работает в Ashburn (iad).
 Go builder закреплён на 1.27.4-bookworm. Runtime содержит CA-сертификаты,
 бинарник и отдельный мем. При старте root настраивает права только `/data`,
 после чего `gosu` запускает сервер с UID/GID 10001. Локальную БД не переносим.
@@ -255,55 +255,28 @@ docker rm sumsub-stage4-check
 тестовый контейнер; тестовый том можно удалить `docker volume rm sumsub-stage4-check`.
 Никогда не используйте эту команду для тома с нужными данными.
 
-### Облачные шаги — выполняет пользователь по одному
+### Публичное демо
 
-1. Установить `brew install flyctl`, выполнить `fly auth login`, затем
-   `fly auth whoami`. Токены и платёжные данные в чат не отправлять.
-2. До создания ресурсов выбрать имя приложения, организацию, регион и расходы
-   по текущему Billing. Конфигурация: одна shared-cpu-1x 512 МБ, один том 1 ГБ,
-   autostop; остановленный сервер не отменяет оплату хранения. Ориентир $5/месяц
-   из плана не ограничивает списания. Проверить
-   [Pricing](https://docs.fly.io/about/pricing) и условия аккаунта.
-3. После выбора, из `app/`:
+Откройте [регистрацию](https://sumsub-cat-demo.fly.dev/account/register),
+создайте тестовый аккаунт и обновите кабинет. Выход и повторный вход доступны
+через [кабинет](https://sumsub-cat-demo.fly.dev/account). Статус нового аккаунта
+«Проверка не начата». Интеграция WebSDK запланирована на этап 5.
 
-   ```sh
-   fly launch --no-deploy --ha=false --no-db --no-redis --no-object-storage --no-github-workflow
-   ```
+При первом запуске использованы `fly apps create sumsub-cat-demo --org personal`
+и `fly volumes create app_data --size 1 --region iad --app sumsub-cat-demo`.
+Том уже создан. Для обновления из каталога `app/`:
 
-   Это уже облачное изменение. Сохранить подготовленный Dockerfile.
-   После команды проверить diff fly.toml: app и primary_region должны
-   соответствовать выбору; env, mounts, health check и VM — файлу проекта.
-   `--ha=false` обязателен: нельзя создавать независимые копии SQLite.
-4. Проверить `fly volumes list --app <app-name>`. Если нужного тома ещё нет:
+```sh
+fly deploy --remote-only --ha=false
+fly status
+fly checks list
+fly volumes list
+```
 
-   ```sh
-   fly volumes create app_data --size 1 --region <region> --app <app-name>
-   ```
-
-   Заменить placeholders. Том и Machine должны находиться в одном регионе.
-   Проверить включённые snapshots; это не проверенная процедура восстановления.
-5. Первый и повторный деплой:
-
-   ```sh
-   fly deploy --remote-only --ha=false
-   fly status
-   fly checks list
-   fly volumes list
-   fly logs
-   ```
-
-   Убедиться, что Machine одна и том один; при ошибке сначала диагностировать
-   существующие ресурсы. Не создавать второй том вслепую. Не заказывать
-   выделенный IPv4, базы или дополнительные сервисы. Если remote builder
-   предлагает платный вариант, сначала проверить его стоимость.
-6. Проверить `https://<app-name>.fly.dev/healthz` (200), HTTP → HTTPS,
-   cookie Secure/HttpOnly/SameSite=Lax. Зарегистрироваться, открыть кабинет,
-   повторить deploy и обновить кабинет с прежней сессией, затем выйти и войти.
-   Проверить `/meme`: гость 401, неодобренный пользователь 403; чужой доступ
-   не выдаётся. Проверить 429 после превышения лимита и вход после окна.
-   В `fly status`/метриках проверить память под нагрузкой в рамках 512 МБ.
-7. Записать URL, фактическую конфигурацию и результаты в README/state через PR.
-   Этап целиком завершается только после удалённой приёмки.
+Одна shared-cpu-1x с 512 МБ. При непрерывной работе в iad ориентир $3.69
+за 30 дней плюс $0.15 за том 1 ГБ и трафик. При autostop продолжается
+учёт хранения тома и корневого диска. Фактическое потребление отображается
+в Usage и Billing личной организации. [Тарифы](https://docs.fly.io/about/pricing).
 
 Одна Machine допускает простой при деплое. Autostop может замедлить первый
 запрос; перед webhook и демонстрацией пересмотрим его отдельно. Мем обновляется
