@@ -22,3 +22,19 @@ func TestConfig(t *testing.T) {
 		}
 	}
 }
+
+func TestMemePath(t *testing.T) {
+	t.Setenv("DB_PATH", "data/test.db")
+	t.Setenv("COOKIE_SECURE", "false")
+	for _, value := range []string{"", "  "} {
+		t.Setenv("MEME_PATH", value)
+		if _, err := Load(); err == nil {
+			t.Fatalf("accepted %q", value)
+		}
+	}
+	t.Setenv("MEME_PATH", "/tmp/cat.png")
+	c, err := Load()
+	if err != nil || c.MemePath != "/tmp/cat.png" {
+		t.Fatalf("config: %+v %v", c, err)
+	}
+}

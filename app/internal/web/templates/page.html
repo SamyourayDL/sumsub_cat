@@ -30,9 +30,17 @@
     input:focus-visible, button:focus-visible { outline: 3px solid #a44b12; outline-offset: 3px; }
     small { display: block; margin-top: .4rem; line-height: 1.5; color: #52615a; }
     .button { display: inline-block; margin-top: 1rem; padding: .85rem 1.2rem; border-radius: .65rem; background: #215b49; color: white; text-decoration: none; }
+    .meme-page { background: #edf0eb; }
+    .meme-nav { position: absolute; top: 1rem; right: 1rem; padding: .8rem 1rem; border-radius: .65rem; background: #fff; }
+    .meme-stage { max-width: none; height: 100vh; height: 100dvh; padding: 5rem 1rem 1rem; }
+    .meme-stage img { display: block; width: 100%; height: 100%; object-fit: contain; }
   </style>
 </head>
-<body>
+<body{{if .Meme}} class="meme-page"{{end}}>
+  {{if .Meme}}
+  <nav class="meme-nav" aria-label="Основная навигация"><a href="/account">Личный кабинет</a></nav>
+  <main class="meme-stage"><img src="/meme" alt="Мем с котиком — награда за успешную проверку личности"></main>
+  {{else}}
   <header>
     <a href="/">Sumsub demo</a>
     <nav aria-label="Основная навигация">
@@ -79,5 +87,6 @@
     </section>
   </main>
   <footer>Демонстрационный интерфейс. Проверка личности ещё не подключена.</footer>
+  {{end}}
 </body>
 </html>

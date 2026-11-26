@@ -21,26 +21,27 @@ type page struct {
 	Title, Heading, Message, Link, Label string
 	Account                              bool
 	Registration                         bool
+	Meme                                 bool
 	User                                 *store.User
 	Error, Login                         string
 }
 
 type handler struct {
-	auth   *auth.Service
-	secure bool
-	tmpl   *template.Template
+	auth     *auth.Service
+	secure   bool
+	memePath string
+	tmpl     *template.Template
 }
 
-func NewHandler(service *auth.Service, secure bool) (http.Handler, error) {
+func NewHandler(service *auth.Service, secure bool, memePath string) (http.Handler, error) {
 	tmpl, err := template.ParseFS(templates, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("parse page templates: %w", err)
 	}
-	h := &handler{auth: service, secure: secure, tmpl: tmpl}
+	h := &handler{auth: service, secure: secure, memePath: memePath, tmpl: tmpl}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		h.render(w, 200, page{Title: "Главная", Heading: "Котик после проверки", Message: "Здесь появится мем с котиком после успешной проверки личности. Пока можно заглянуть в личный кабинет.", Link: "/account", Label: "В личный кабинет"})
-	})
+	mux.HandleFunc("GET /{$}", h.home)
+	mux.HandleFunc("GET /meme", h.meme)
 	mux.HandleFunc("GET /account", h.account)
 	mux.HandleFunc("GET /account/register", h.account)
 	mux.HandleFunc("POST /register", h.authenticate)
@@ -54,6 +55,9 @@ func NewHandler(service *auth.Service, secure bool) (http.Handler, error) {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/account" || r.URL.Path == "/account/register" || r.URL.Path == "/register" || r.URL.Path == "/login" || r.URL.Path == "/logout" {
 			w.Header().Set("Cache-Control", "no-store")
+		}
+		if r.URL.Path == "/" || r.URL.Path == "/meme" {
+			w.Header().Set("Cache-Control", "private, no-store")
 		}
 		protected.ServeHTTP(w, r)
 	}), nil
