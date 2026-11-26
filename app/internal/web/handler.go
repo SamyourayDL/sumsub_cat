@@ -20,6 +20,7 @@ var templates embed.FS
 type page struct {
 	Title, Heading, Message, Link, Label string
 	Account                              bool
+	Registration                         bool
 	User                                 *store.User
 	Error, Login                         string
 }
@@ -41,6 +42,7 @@ func NewHandler(service *auth.Service, secure bool) (http.Handler, error) {
 		h.render(w, 200, page{Title: "Главная", Heading: "Котик после проверки", Message: "Здесь появится мем с котиком после успешной проверки личности. Пока можно заглянуть в личный кабинет.", Link: "/account", Label: "В личный кабинет"})
 	})
 	mux.HandleFunc("GET /account", h.account)
+	mux.HandleFunc("GET /account/register", h.account)
 	mux.HandleFunc("POST /register", h.authenticate)
 	mux.HandleFunc("POST /login", h.authenticate)
 	mux.HandleFunc("POST /logout", h.logout)
@@ -50,7 +52,7 @@ func NewHandler(service *auth.Service, secure bool) (http.Handler, error) {
 	})
 	protected := http.NewCrossOriginProtection().Handler(mux)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/account" || r.URL.Path == "/register" || r.URL.Path == "/login" || r.URL.Path == "/logout" {
+		if r.URL.Path == "/account" || r.URL.Path == "/account/register" || r.URL.Path == "/register" || r.URL.Path == "/login" || r.URL.Path == "/logout" {
 			w.Header().Set("Cache-Control", "no-store")
 		}
 		protected.ServeHTTP(w, r)
@@ -70,6 +72,17 @@ func (h *handler) render(w http.ResponseWriter, status int, data page) {
 func accountPage() page {
 	return page{Title: "Личный кабинет", Heading: "Личный кабинет", Account: true, Link: "/", Label: "На главную"}
 }
+func guestPage(registration bool) page {
+	p := accountPage()
+	p.Registration = registration
+	p.Title, p.Heading = "Вход", "Вход в кабинет"
+	p.Message = "Войдите, чтобы увидеть статус проверки."
+	if registration {
+		p.Title, p.Heading = "Регистрация", "Создать аккаунт"
+		p.Message = "Придумайте логин и пароль для тестового аккаунта."
+	}
+	return p
+}
 func sessionToken(r *http.Request) string {
 	c, err := r.Cookie("session")
 	if err != nil {
@@ -88,10 +101,16 @@ func (h *handler) account(w http.ResponseWriter, r *http.Request) {
 	}
 	p := accountPage()
 	p.User = user
+	if user == nil {
+		p = guestPage(r.URL.Path == "/account/register")
+	} else if r.URL.Path == "/account/register" {
+		http.Redirect(w, r, "/account", http.StatusSeeOther)
+		return
+	}
 	h.render(w, 200, p)
 }
-func (h *handler) formError(w http.ResponseWriter, status int, message, login string) {
-	p := accountPage()
+func (h *handler) formError(w http.ResponseWriter, r *http.Request, status int, message, login string) {
+	p := guestPage(r.URL.Path == "/register")
 	p.Error = message
 	p.Login = login
 	h.render(w, status, p)
@@ -106,9 +125,9 @@ func (h *handler) parseForm(w http.ResponseWriter, r *http.Request) bool {
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			h.formError(w, 413, "Форма слишком большая (максимум 8 КиБ)", "")
+			h.formError(w, r, 413, "Форма слишком большая (максимум 8 КиБ)", "")
 		} else {
-			h.formError(w, 400, "Не удалось прочитать форму", "")
+			h.formError(w, r, 400, "Не удалось прочитать форму", "")
 		}
 		return false
 	}
@@ -135,7 +154,7 @@ func (h *handler) authenticate(w http.ResponseWriter, r *http.Request) {
 	register := r.URL.Path == "/register"
 	if register {
 		if err := auth.Validate(login, password); err != nil {
-			h.formError(w, 400, err.Error(), login)
+			h.formError(w, r, 400, err.Error(), login)
 			return
 		}
 	}
@@ -143,9 +162,9 @@ func (h *handler) authenticate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, store.ErrLoginTaken):
-			h.formError(w, 409, "Этот логин уже занят", login)
+			h.formError(w, r, 409, "Этот логин уже занят", login)
 		case errors.Is(err, auth.ErrCredentials):
-			h.formError(w, 401, auth.ErrCredentials.Error(), login)
+			h.formError(w, r, 401, auth.ErrCredentials.Error(), login)
 		default:
 			serverError(w)
 		}
