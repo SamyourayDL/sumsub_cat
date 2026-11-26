@@ -24,19 +24,21 @@ type page struct {
 	Registration                         bool
 	Verification                         bool
 	VerificationSession                  string
+	Result                               verificationView
 	Meme                                 bool
 	User                                 *store.User
 	Error, Login                         string
 }
 
 type handler struct {
-	auth     *auth.Service
-	secure   bool
-	memePath string
-	tmpl     *template.Template
-	limits   *authLimits
-	trustFly bool
-	issuer   TokenIssuer
+	auth                     *auth.Service
+	secure                   bool
+	memePath                 string
+	tmpl                     *template.Template
+	limits                   *authLimits
+	trustFly                 bool
+	issuer                   TokenIssuer
+	webhookSecret, levelName string
 }
 
 func NewHandler(service *auth.Service, secure bool, memePath string, trustFly ...bool) (http.Handler, error) {
@@ -44,11 +46,15 @@ func NewHandler(service *auth.Service, secure bool, memePath string, trustFly ..
 }
 
 func NewVerificationHandler(service *auth.Service, secure bool, memePath string, issuer TokenIssuer, trustFly ...bool) (http.Handler, error) {
+	return NewResultsHandler(service, secure, memePath, issuer, "", "", trustFly...)
+}
+
+func NewResultsHandler(service *auth.Service, secure bool, memePath string, issuer TokenIssuer, webhookSecret, levelName string, trustFly ...bool) (http.Handler, error) {
 	tmpl, err := template.ParseFS(templates, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("parse page templates: %w", err)
 	}
-	h := &handler{auth: service, secure: secure, memePath: memePath, tmpl: tmpl, limits: newAuthLimits(), issuer: issuer}
+	h := &handler{auth: service, secure: secure, memePath: memePath, tmpl: tmpl, limits: newAuthLimits(), issuer: issuer, webhookSecret: webhookSecret, levelName: levelName}
 	if len(trustFly) > 0 {
 		h.trustFly = trustFly[0]
 	}
@@ -61,6 +67,8 @@ func NewVerificationHandler(service *auth.Service, secure bool, memePath string,
 	mux.HandleFunc("POST /login", h.authenticate)
 	mux.HandleFunc("POST /logout", h.logout)
 	mux.HandleFunc("POST /account/verification/token", h.verificationToken)
+	mux.HandleFunc("POST /webhooks/sumsub", h.webhook)
+	mux.HandleFunc("GET /account/verification/status", h.verificationStatus)
 	mux.HandleFunc("GET /account/verification/session", h.verificationSession)
 	mux.HandleFunc("GET /assets/verification.js", h.verificationScript)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -69,11 +77,15 @@ func NewVerificationHandler(service *auth.Service, secure bool, memePath string,
 	})
 	protected := http.NewCrossOriginProtection().Handler(mux)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/account/verification/token" || r.URL.Path == "/account/verification/session" || r.URL.Path == "/account" || r.URL.Path == "/account/register" || r.URL.Path == "/register" || r.URL.Path == "/login" || r.URL.Path == "/logout" {
+		if r.URL.Path == "/account/verification/status" || r.URL.Path == "/webhooks/sumsub" || r.URL.Path == "/account/verification/token" || r.URL.Path == "/account/verification/session" || r.URL.Path == "/account" || r.URL.Path == "/account/register" || r.URL.Path == "/register" || r.URL.Path == "/login" || r.URL.Path == "/logout" {
 			w.Header().Set("Cache-Control", "no-store")
 		}
 		if r.URL.Path == "/" || r.URL.Path == "/meme" {
 			w.Header().Set("Cache-Control", "private, no-store")
+		}
+		if r.URL.Path == "/webhooks/sumsub" {
+			mux.ServeHTTP(w, r)
+			return
 		}
 		protected.ServeHTTP(w, r)
 	}), nil
@@ -121,6 +133,9 @@ func (h *handler) account(w http.ResponseWriter, r *http.Request) {
 	}
 	p := accountPage()
 	p.User = user
+	if user != nil {
+		p.Result = viewVerification(user.Status, h.issuer != nil)
+	}
 	p.Verification = h.issuer != nil
 	p.VerificationSession = verificationBinding(sessionToken(r))
 	if user == nil {
@@ -168,6 +183,9 @@ func (h *handler) authenticate(w http.ResponseWriter, r *http.Request) {
 	if user != nil {
 		p := accountPage()
 		p.User = user
+		p.Result = viewVerification(user.Status, h.issuer != nil)
+		p.Verification = h.issuer != nil
+		p.VerificationSession = verificationBinding(oldToken)
 		p.Error = "Сначала выйдите из текущего аккаунта"
 		h.render(w, 409, p)
 		return

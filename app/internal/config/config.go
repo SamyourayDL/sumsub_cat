@@ -8,13 +8,14 @@ import (
 )
 
 type Config struct {
-	DBPath          string
-	MemePath        string
-	CookieSecure    bool
-	TrustFlyProxy   bool
-	SumsubAppToken  string
-	SumsubSecretKey string
-	SumsubLevelName string
+	DBPath              string
+	MemePath            string
+	CookieSecure        bool
+	TrustFlyProxy       bool
+	SumsubAppToken      string
+	SumsubSecretKey     string
+	SumsubLevelName     string
+	SumsubWebhookSecret string
 }
 
 func Load() (Config, error) {
@@ -48,6 +49,10 @@ func Load() (Config, error) {
 	c.SumsubAppToken = os.Getenv("SUMSUB_APP_TOKEN")
 	c.SumsubSecretKey = os.Getenv("SUMSUB_SECRET_KEY")
 	c.SumsubLevelName = os.Getenv("SUMSUB_LEVEL_NAME")
+	c.SumsubWebhookSecret = os.Getenv("SUMSUB_WEBHOOK_SECRET")
+	if v := c.SumsubWebhookSecret; v != "" && (strings.TrimSpace(v) != v || strings.ContainsAny(v, "\r\n\x00")) {
+		return c, fmt.Errorf("SUMSUB_WEBHOOK_SECRET must not contain surrounding whitespace or control characters")
+	}
 	values := []string{c.SumsubAppToken, c.SumsubSecretKey, c.SumsubLevelName}
 	configured := 0
 	for _, v := range values {

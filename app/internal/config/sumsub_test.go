@@ -32,3 +32,25 @@ func TestSumsubConfiguration(t *testing.T) {
 		})
 	}
 }
+
+func TestWebhookSecretConfiguration(t *testing.T) {
+	for _, secret := range []string{"", "local-webhook-secret", " invalid", "secret\n"} {
+		t.Run(secret, func(t *testing.T) {
+			t.Setenv("SUMSUB_APP_TOKEN", "")
+			t.Setenv("SUMSUB_SECRET_KEY", "")
+			t.Setenv("SUMSUB_LEVEL_NAME", "")
+			t.Setenv("SUMSUB_WEBHOOK_SECRET", secret)
+			cfg, err := Load()
+			valid := secret == "" || secret == "local-webhook-secret"
+			if (err == nil) != valid {
+				t.Fatal("validation")
+			}
+			if valid && cfg.SumsubWebhookSecret != secret {
+				t.Fatal("missing webhook secret")
+			}
+			if err != nil && strings.Contains(err.Error(), secret) {
+				t.Fatal("secret leaked")
+			}
+		})
+	}
+}

@@ -62,7 +62,7 @@ func TestSchemaAndAtomicSession(t *testing.T) {
 	if err := s.db.QueryRow("SELECT count(*) FROM sessions").Scan(&count); err != nil || count != 0 {
 		t.Fatal("expired sessions not cleared")
 	}
-	if _, err := s.db.Exec("PRAGMA user_version=3"); err != nil {
+	if _, err := s.db.Exec("PRAGMA user_version=4"); err != nil {
 		t.Fatal(err)
 	}
 	s.Close()

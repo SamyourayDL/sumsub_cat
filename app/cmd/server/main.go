@@ -41,7 +41,7 @@ func run() error {
 	if cfg.SumsubAppToken != "" {
 		issuer = sumsub.New(cfg.SumsubAppToken, cfg.SumsubSecretKey, cfg.SumsubLevelName)
 	}
-	handler, err := web.NewVerificationHandler(service, cfg.CookieSecure, cfg.MemePath, issuer, cfg.TrustFlyProxy)
+	handler, err := web.NewResultsHandler(service, cfg.CookieSecure, cfg.MemePath, issuer, cfg.SumsubWebhookSecret, cfg.SumsubLevelName, cfg.TrustFlyProxy)
 	if err != nil {
 		return err
 	}

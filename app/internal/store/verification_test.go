@@ -86,3 +86,37 @@ func TestVerificationMigrationAndPersistence(t *testing.T) {
 		t.Fatal("duplicate external id accepted")
 	}
 }
+
+func TestV2ResultsMigration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "v2.db")
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = raw.Exec(`CREATE TABLE users(id INTEGER PRIMARY KEY,login TEXT UNIQUE,password_hash TEXT,verification_status TEXT,created_at INTEGER,sumsub_external_id TEXT);
+ CREATE UNIQUE INDEX users_sumsub_external_id ON users(sumsub_external_id);
+ CREATE TABLE sessions(token_hash TEXT PRIMARY KEY,user_id INTEGER,created_at INTEGER,expires_at INTEGER);
+ INSERT INTO users VALUES(1,'existing','hash','approved',1,'stable-id');
+ INSERT INTO sessions VALUES('session',1,1,4102444800); PRAGMA user_version=2;`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw.Close()
+	db, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	u, err := db.SessionUser(context.Background(), "session", time.Now())
+	if err != nil || u == nil || u.Status != "approved" {
+		t.Fatal("v2 migration lost account/session/status")
+	}
+	var version int
+	if err = db.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != 3 {
+		t.Fatal("schema version")
+	}
+	outcome, err := db.ApplyVerification(context.Background(), VerificationEvent{ExternalID: "stable-id", ApplicantID: "applicant", Type: "applicantReset", Status: "not_started", Millis: 1})
+	if err != nil || outcome != "applied" {
+		t.Fatal("v3 fields unusable", err)
+	}
+}

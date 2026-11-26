@@ -20,6 +20,7 @@
     p { line-height: 1.65; max-width: 38rem; }
     label { display: block; margin-top: 1rem; }
     input { display: block; width: 100%; max-width: 26rem; padding: .7rem; margin-top: .4rem; font: inherit; border: 1px solid #85968c; border-radius: .4rem; }
+    [hidden] { display: none !important; }
     button { font: inherit; cursor: pointer; border: 0; }
     .error { color: #9c271a; }
     .auth-card { max-width: 32rem; margin-inline: auto; }
@@ -57,16 +58,16 @@
       {{if .Account}}
         {{if .User}}
           <p>Вы вошли как <strong>{{.User.Login}}</strong>.</p>
-          <p>Статус: <strong>{{if eq .User.Status "not_started"}}Проверка не начата{{else}}{{.User.Status}}{{end}}</strong></p>
-          {{if .Verification}}
-          <div id="verification" data-session="{{.VerificationSession}}">
-            <button class="button" id="verification-start" type="button">Подтвердить личность</button>
+          <p>Статус: <strong id="verification-status" role="status" aria-live="polite">{{.Result.Message}}</strong></p>
+          <div id="verification" data-session="{{.VerificationSession}}" data-status="{{.Result.Status}}" data-poll="{{.Result.Poll}}" data-action="{{.Result.Action}}">
+            <button class="button" id="verification-start" type="button" {{if ne .Result.Action "sdk"}}hidden{{end}}>{{.Result.Button}}</button>
+            <a id="verification-meme" href="/" {{if ne .Result.Action "meme"}}hidden{{end}}>Посмотреть котика</a>
             <p id="verification-message" role="status" aria-live="polite">Проверка в тестовом режиме Sandbox. Используйте тестовые документы.</p>
             <a id="verification-reload" href="/account" hidden>Открыть кабинет заново</a>
             <div id="sumsub-websdk-container"></div>
           </div>
           <script src="/assets/verification.js" defer></script>
-          {{else}}<p>Проверка личности пока недоступна.</p>{{end}}
+          {{if not .Verification}}<p>Проверка личности пока недоступна.</p>{{end}}
           <form method="post" action="/logout"><button class="button" type="submit">Выйти</button></form>
         {{else}}
           {{if .Registration}}
