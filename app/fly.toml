@@ -1,6 +1,5 @@
-# fly launch will set app and primary_region after the user's choice.
-# app = "chosen-app-name"
-# primary_region = "chosen-region"
+app = "sumsub-cat-demo"
+primary_region = "iad"
 kill_signal = "SIGTERM"
 kill_timeout = "15s"
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -40,6 +41,10 @@ func run() error {
 		return err
 	}
 	server := &http.Server{Addr: "0.0.0.0:8080", Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	listener, err := net.Listen("tcp4", server.Addr)
+	if err != nil {
+		return err
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	done := make(chan struct{})
@@ -53,7 +58,7 @@ func run() error {
 		}
 	}()
 	log.Print("Listening on http://localhost:8080")
-	err = server.ListenAndServe()
+	err = server.Serve(listener)
 	stop()
 	<-done
 	if errors.Is(err, http.ErrServerClosed) {
