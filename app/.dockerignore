@@ -1,0 +1,17 @@
+# Allowlist: remote builders receive only inputs required for this image.
+**
+!go.mod
+!go.sum
+!cmd/
+!cmd/server/
+!cmd/server/*.go
+!internal/
+!internal/**/
+!internal/**/*.go
+!internal/web/templates/*.html
+!resources/
+!resources/meme.jpg
+!docker-entrypoint.sh
+!Dockerfile
+!.dockerignore
+**/*_test.go

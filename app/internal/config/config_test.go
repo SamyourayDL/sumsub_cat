@@ -38,3 +38,19 @@ func TestMemePath(t *testing.T) {
 		t.Fatalf("config: %+v %v", c, err)
 	}
 }
+
+func TestTrustFlyProxy(t *testing.T) {
+	for _, value := range []string{"true", "false", "invalid"} {
+		t.Setenv("TRUST_FLY_PROXY", value)
+		c, err := Load()
+		if value == "invalid" {
+			if err == nil {
+				t.Fatal("invalid trust accepted")
+			}
+			continue
+		}
+		if err != nil || c.TrustFlyProxy != (value == "true") {
+			t.Fatal(c, err)
+		}
+	}
+}

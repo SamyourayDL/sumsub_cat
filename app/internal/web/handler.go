@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"sumsub-demo/internal/auth"
@@ -31,14 +32,19 @@ type handler struct {
 	secure   bool
 	memePath string
 	tmpl     *template.Template
+	limits   *authLimits
+	trustFly bool
 }
 
-func NewHandler(service *auth.Service, secure bool, memePath string) (http.Handler, error) {
+func NewHandler(service *auth.Service, secure bool, memePath string, trustFly ...bool) (http.Handler, error) {
 	tmpl, err := template.ParseFS(templates, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("parse page templates: %w", err)
 	}
-	h := &handler{auth: service, secure: secure, memePath: memePath, tmpl: tmpl}
+	h := &handler{auth: service, secure: secure, memePath: memePath, tmpl: tmpl, limits: newAuthLimits()}
+	if len(trustFly) > 0 {
+		h.trustFly = trustFly[0]
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", h.home)
 	mux.HandleFunc("GET /meme", h.meme)
@@ -162,6 +168,18 @@ func (h *handler) authenticate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	ip, ok := clientIP(r, h.trustFly)
+	if !ok {
+		h.formError(w, r, 400, "Не удалось определить адрес клиента", login)
+		return
+	}
+	release, retry := h.limits.acquire(ip, login, time.Now())
+	if retry > 0 {
+		w.Header().Set("Retry-After", strconv.Itoa(int((retry+time.Second-1)/time.Second)))
+		h.formError(w, r, 429, "Слишком много попыток. Попробуйте позже.", login)
+		return
+	}
+	defer release()
 	token, expires, err := h.auth.Authenticate(r.Context(), login, password, oldToken, register)
 	if err != nil {
 		switch {
