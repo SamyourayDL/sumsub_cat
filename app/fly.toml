@@ -1,0 +1,37 @@
+# fly launch will set app and primary_region after the user's choice.
+# app = "chosen-app-name"
+# primary_region = "chosen-region"
+kill_signal = "SIGTERM"
+kill_timeout = "15s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DB_PATH = "/data/app.db"
+  MEME_PATH = "/app/resources/meme.jpg"
+  COOKIE_SECURE = "true"
+  TRUST_FLY_PROXY = "true"
+
+[[mounts]]
+  source = "app_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "5s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "512mb"

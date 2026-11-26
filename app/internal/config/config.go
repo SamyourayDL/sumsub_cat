@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	DBPath       string
-	MemePath     string
-	CookieSecure bool
+	DBPath        string
+	MemePath      string
+	CookieSecure  bool
+	TrustFlyProxy bool
 }
 
 func Load() (Config, error) {
@@ -32,6 +33,13 @@ func Load() (Config, error) {
 		c.CookieSecure, err = strconv.ParseBool(value)
 		if err != nil {
 			return c, fmt.Errorf("COOKIE_SECURE must be true or false")
+		}
+	}
+	if value, ok := os.LookupEnv("TRUST_FLY_PROXY"); ok {
+		var err error
+		c.TrustFlyProxy, err = strconv.ParseBool(value)
+		if err != nil {
+			return c, fmt.Errorf("TRUST_FLY_PROXY must be true or false")
 		}
 	}
 	return c, nil

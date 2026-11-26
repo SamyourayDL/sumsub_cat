@@ -35,11 +35,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	handler, err := web.NewHandler(service, cfg.CookieSecure, cfg.MemePath)
+	handler, err := web.NewHandler(service, cfg.CookieSecure, cfg.MemePath, cfg.TrustFlyProxy)
 	if err != nil {
 		return err
 	}
-	server := &http.Server{Addr: ":8080", Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	server := &http.Server{Addr: "0.0.0.0:8080", Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	done := make(chan struct{})
