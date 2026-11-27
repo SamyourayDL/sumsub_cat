@@ -20,6 +20,7 @@ var templates embed.FS
 
 type page struct {
 	Title, Heading, Message, Link, Label string
+	CardClass                            string
 	Account                              bool
 	Registration                         bool
 	Verification                         bool

@@ -15,6 +15,9 @@
     a:focus-visible { outline: 3px solid #a44b12; outline-offset: 5px; }
     main { padding-top: 4rem; padding-bottom: 4rem; }
     .card { padding: clamp(1.5rem, 5vw, 3rem); border: 1px solid #ced8ce; border-radius: 1.5rem; background: #fff; }
+    .card-retry { background: #fff4c2; border-color: #d6ae37; }
+    .card-final { background: #ffe3e1; border-color: #ce746c; }
+    .card h1 { overflow-wrap: anywhere; }
     #verification-message:empty { margin: 0; }
     h1 { font-size: clamp(2rem, 6vw, 3rem); line-height: 1.15; margin: 1rem 0; }
     p { line-height: 1.65; max-width: 38rem; }
@@ -49,7 +52,7 @@
     </nav>
   </header>
   <main>
-    <section class="card{{if and .Account (not .User)}} auth-card{{end}}" aria-labelledby="page-heading">
+    <section class="card{{with .CardClass}} {{.}}{{end}}{{if and .Account (not .User)}} auth-card{{end}}" aria-labelledby="page-heading">
       <h1 id="page-heading">{{.Heading}}</h1>
       {{if .Message}}<p>{{.Message}}</p>{{end}}
       {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
@@ -91,7 +94,7 @@
           {{end}}
         {{end}}
       {{end}}
-      <a class="{{if and .Account (not .User)}}back-link{{else}}button{{end}}" href="{{.Link}}">{{.Label}}</a>
+      {{if .Link}}<a class="{{if and .Account (not .User)}}back-link{{else}}button{{end}}" href="{{.Link}}">{{.Label}}</a>{{end}}
     </section>
   </main>
   {{end}}
