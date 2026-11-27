@@ -108,10 +108,10 @@ func guestPage(registration bool) page {
 	p := accountPage()
 	p.Registration = registration
 	p.Title, p.Heading = "Вход", "Вход в кабинет"
-	p.Message = "Войдите, чтобы увидеть статус проверки."
 	if registration {
 		p.Title, p.Heading = "Регистрация", "Создать аккаунт"
-		p.Message = "Придумайте логин и пароль для тестового аккаунта."
+	} else {
+		p.Message = "Войдите, чтобы увидеть статус проверки."
 	}
 	return p
 }

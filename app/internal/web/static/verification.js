@@ -114,7 +114,7 @@
         .on("idCheck.onError", () => { if (run === generation) failed(); })
         .build();
       instance.launch("#sumsub-websdk-container");
-      if (run === generation) message.textContent = "Следуйте инструкциям в виджете. Это тестовая проверка.";
+      if (run === generation) message.textContent = "Следуйте инструкциям в виджете.";
     } catch {
       if (run === generation) failed();
     }
