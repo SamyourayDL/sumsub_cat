@@ -15,7 +15,22 @@ func (h *handler) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p := page{Title: "Главная", Heading: "Котик после проверки", Message: "Здесь появится мем с котиком после успешной проверки личности. Пока можно заглянуть в личный кабинет.", Link: "/account", Label: "В личный кабинет"}
-	p.Meme = user != nil && user.Status == "approved"
+	if user != nil {
+		switch user.Status {
+		case "retry":
+			p.CardClass = "card-retry"
+			p.Heading = "Нужно исправить материалы."
+			p.Message = "Продолжите проверку личности в личном кабинете."
+			p.Label = "Исправить материалы"
+		case "rejected":
+			p.CardClass = "card-final"
+			p.Heading = "Проверка личности окончательно отклонена."
+			p.Message = "Доступ к мему закрыт для этого аккаунта."
+			p.Link = ""
+		case "approved":
+			p.Meme = true
+		}
+	}
 	h.render(w, http.StatusOK, p)
 }
 

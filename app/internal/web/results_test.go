@@ -129,6 +129,26 @@ func TestWebhookAndStatus(t *testing.T) {
 			t.Fatal("status exposure/cache")
 		}
 		expect(t, w, 200, `"action":"`+tc.action+`"`)
+		if tc.status == "retry" || tc.status == "rejected" {
+			home := request(h, "GET", "/", "", alice, nil)
+			account := request(h, "GET", "/account", "", alice, nil)
+			expectPrivatePage(t, home, 200, `href="/account">Личный кабинет</a>`)
+			if tc.status == "retry" {
+				expectPrivatePage(t, home, 200, `class="card card-retry"`)
+				expectPrivatePage(t, home, 200, "Нужно исправить материалы.</h1>")
+				expectPrivatePage(t, home, 200, "<p>Продолжите проверку личности в личном кабинете.</p>")
+				expectPrivatePage(t, home, 200, `href="/account">Исправить материалы</a>`)
+				expect(t, account, 200, `type="button" >Исправить материалы</button>`)
+			} else {
+				expectPrivatePage(t, home, 200, `class="card card-final"`)
+				expectPrivatePage(t, home, 200, "Проверка личности окончательно отклонена.</h1>")
+				expectPrivatePage(t, home, 200, "<p>Доступ к мему закрыт для этого аккаунта.</p>")
+				expect(t, account, 200, `id="verification-start" type="button" hidden`)
+				if strings.Contains(home.Body.String(), "Исправить материалы") {
+					t.Fatal("unexpected retry action on FINAL home")
+				}
+			}
+		}
 		before := calls
 		code := 403
 		if tc.allowed {
@@ -142,10 +162,10 @@ func TestWebhookAndStatus(t *testing.T) {
 		if tc.status == "approved" {
 			memeCode = 200
 		}
-		expectMemeResult(t, request(h, "GET", "/meme", "", alice, nil), memeCode, "")
+		expectPrivatePage(t, request(h, "GET", "/meme", "", alice, nil), memeCode, "")
 		bCookie := &http.Cookie{Name: "session", Value: strings.Repeat("b", 64)}
 		expect(t, request(h, "GET", statusURL, "", bCookie, headers), 409, "")
-		expectMemeResult(t, request(h, "GET", "/meme", "", bCookie, nil), 403, "")
+		expectPrivatePage(t, request(h, "GET", "/meme", "", bCookie, nil), 403, "")
 	}
 	// Legacy seconds precision is accepted; invalid milliseconds never fall back.
 	legacy := strings.Replace(eventBody(id, "applicantPending", "", "", "2026-11-26 12:00:30.000"), `"createdAtMs":"2026-11-26 12:00:30.000"`, `"createdAt":"2026-11-26 12:00:30"`, 1)
@@ -158,7 +178,7 @@ func TestWebhookAndStatus(t *testing.T) {
 	expect(t, signedEvent(h, eventBody(id, "applicantReviewed", "RED", "FINAL", at), nil), 200, "")
 	expect(t, signedEvent(h, green, nil), 200, "")
 	expect(t, request(h, "GET", statusURL, "", alice, headers), 200, `"status":"conflict"`)
-	expectMemeResult(t, request(h, "GET", "/meme", "", alice, nil), 403, "")
+	expectPrivatePage(t, request(h, "GET", "/meme", "", alice, nil), 403, "")
 	expect(t, request(h, "POST", "/account/verification/token", "", alice, headers), 403, "")
 	newer := strings.Replace(green, "12:01:00", "12:02:00", 1)
 	expect(t, signedEvent(h, newer, nil), 200, "")
@@ -183,10 +203,13 @@ func TestWebhookAndStatus(t *testing.T) {
 	expect(t, request(h, "GET", statusURL, "", &http.Cookie{Name: "session", Value: token}, map[string]string{"X-Verification-Session": verificationBinding(token)}), 200, `"status":"approved"`)
 }
 
-func expectMemeResult(t *testing.T, w *httptest.ResponseRecorder, code int, _ string) {
+func expectPrivatePage(t *testing.T, w *httptest.ResponseRecorder, code int, fragment string) {
 	t.Helper()
 	if w.Code != code || w.Header().Get("Cache-Control") != "private, no-store" {
-		t.Fatalf("meme: status %d want %d, cache %q", w.Code, code, w.Header().Get("Cache-Control"))
+		t.Fatalf("private page: status %d want %d, cache %q", w.Code, code, w.Header().Get("Cache-Control"))
+	}
+	if !strings.Contains(w.Body.String(), fragment) {
+		t.Fatalf("private page missing %q", fragment)
 	}
 }
 
