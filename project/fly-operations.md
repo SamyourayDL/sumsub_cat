@@ -14,16 +14,18 @@
 
 ## «Останови» или «выключи без удаления хранилища»
 
-По умолчанию сохранить SQLite. Обычный autostop удобен между посещениями, но запрос к сайту будит машину. Для паузы до явного возобновления применить временную настройку непосредственно к Machine. Подставить её текущий ID вместо MACHINE_ID.
+По умолчанию сохранить SQLite. Для паузы отключить маршрутизацию к Machine через `cordon` и остановить её. 28 ноября 2026 публичный запрос разбудил машину даже при `autostart: false`. Подставить текущий ID вместо MACHINE_ID.
 
 ```sh
 fly machine update MACHINE_ID -a sumsub-cat-demo --autostart=false --skip-start
+fly machine cordon MACHINE_ID -a sumsub-cat-demo
 fly machine stop MACHINE_ID -a sumsub-cat-demo
-fly machine status MACHINE_ID -a sumsub-cat-demo --display-config
+curl --max-time 15 -sS -o /dev/null -w 'HTTP %{http_code}\n' https://sumsub-cat-demo.fly.dev/healthz
+fly machine list -a sumsub-cat-demo
 fly volumes list -a sumsub-cat-demo
 ```
 
-Если машина уже остановлена, после обновления настройки достаточно проверки. Подтвердить состояние stopped, отключённый autostart в конфигурации сервиса и наличие того же тома. Вычисления остановлены, учёт хранения тома и корневого диска продолжается. Для возобновления той же версии вернуть `fly machine update MACHINE_ID -a sumsub-cat-demo --autostart=true`, при состоянии stopped выполнить `fly machine start MACHINE_ID -a sumsub-cat-demo` и проверить /healthz.
+Проверить, что публичный `/healthz` недоступен и машина осталась `stopped` после запроса. Сверить тот же том. Вычисления остановлены, учёт хранения тома и корневого диска продолжается. Для возобновления той же версии выполнить `fly machine update MACHINE_ID -a sumsub-cat-demo --autostart=true --skip-start`, запустить остановленную машину через `fly machine start MACHINE_ID -a sumsub-cat-demo`, вернуть маршрутизацию через `fly machine uncordon MACHINE_ID -a sumsub-cat-demo` и проверить `/healthz`.
 
 ## «Выключи полностью» или «удали вместе с хранилищем»
 
